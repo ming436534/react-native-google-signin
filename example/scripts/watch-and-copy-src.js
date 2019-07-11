@@ -4,21 +4,28 @@ const watch = require('node-watch');
 const rimraf = require('rimraf');
 const minimatch = require('minimatch');
 
+function log(cmd, ...args) {
+  console.log(cmd.padEnd(11, '.') + ':', ...args);
+}
+
 function copyAndWatch(source, destination, fileGlob) {
-  console.log(`Cleaning "${destination}"`);
+  const logging_source = path.relative('.', source);
+  const logging_dest = path.relative('.', destination);
+
+  log('Cleaning', logging_dest);
   rimraf(destination, () => {
-    console.log(`Copying "${source}" to "${destination}"`);
-    fs.copy(source, destination, (err) => {
+    log('Copying', `"${logging_source}" to "${logging_dest}"`);
+    fs.copy(source, destination, err => {
       if (err) console.error(err);
     });
 
-    console.log(`Watching "${source}"`);
-    watch(source, (filename) => {
+    log('Watching', logging_source);
+    watch(source, (_, filename) => {
       const localPath = filename.split(source).pop();
       if (matchesFile(localPath, fileGlob)) {
         const destinationPath = `${destination}${localPath}`;
-        console.log(`Copying "${filename}" to "${destinationPath}"`);
-        fs.copy(filename, destinationPath, (err) => {
+        log('Copying', `"${filename}" to "${destinationPath}"`);
+        fs.copy(filename, destinationPath, err => {
           if (err) console.error(err);
         });
       }
@@ -31,22 +38,16 @@ function matchesFile(filename, fileGlob) {
   return minimatch(path.basename(filename), fileGlob);
 }
 
-// JavaScript
-copyAndWatch(
-  '../src',
-  'node_modules/react-native-google-signin/src'
-);
+// only JavaScript files need to be copied over
+// the iOS and Android example projects can edit the native module directly
+const SRC_DIR = path.resolve('../src');
+const DEST_DIR = path.resolve('./node_modules/react-native-google-signin/src');
 
-// Android
-copyAndWatch(
-  '../android',
-  'node_modules/react-native-google-signin/android',
-  '*.java'
-);
+// Remove DEST_DIR/../example dir since it messes up with hastemap module resolver
+const EXAMPLE_DIR = path.resolve(DEST_DIR, '..', 'example');
+log('Cleaning', path.relative('.', EXAMPLE_DIR));
+fs.removeSync(EXAMPLE_DIR);
+log('Cleaned', path.relative('.', EXAMPLE_DIR));
 
-// iOS
-copyAndWatch(
-  '../ios',
-  'node_modules/react-native-google-signin/ios',
-  '{*.m,*.h}'
-);
+// Start watcher
+copyAndWatch(SRC_DIR, DEST_DIR);
