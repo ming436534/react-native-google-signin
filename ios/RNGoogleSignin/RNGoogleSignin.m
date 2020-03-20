@@ -66,11 +66,10 @@ RCT_EXPORT_METHOD(configure:(NSDictionary *)options
   }
 
   [GIDSignIn sharedInstance].delegate = self;
-  [GIDSignIn sharedInstance].uiDelegate = self;
   [GIDSignIn sharedInstance].scopes = options[@"scopes"];
   [GIDSignIn sharedInstance].shouldFetchBasicProfile = YES; // email, profile
   [GIDSignIn sharedInstance].loginHint = options[@"loginHint"];
-    
+
   if (options[@"iosClientId"]) {
     [GIDSignIn sharedInstance].clientID = options[@"iosClientId"];
   } else {
@@ -91,17 +90,16 @@ RCT_EXPORT_METHOD(configure:(NSDictionary *)options
 RCT_EXPORT_METHOD(signInSilently:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
-  if ([self.promiseWrapper setPromiseWithInProgressCheck:resolve rejecter:reject fromCallSite:@"signInSilently"]) {
-    [[GIDSignIn sharedInstance] signInSilently];
-  }
+  [self.promiseWrapper setPromiseWithInProgressCheck:resolve rejecter:reject fromCallSite:@"signInSilently"];
+  [[GIDSignIn sharedInstance] restorePreviousSignIn];
 }
 
 RCT_EXPORT_METHOD(signIn:(RCTPromiseResolveBlock)resolve
                   signInReject:(RCTPromiseRejectBlock)reject)
 {
-  if ([self.promiseWrapper setPromiseWithInProgressCheck:resolve rejecter:reject fromCallSite:@"signIn"]) {
-    [[GIDSignIn sharedInstance] signIn];
-  }
+  [GIDSignIn sharedInstance].presentingViewController = RCTPresentedViewController();
+  [self.promiseWrapper setPromiseWithInProgressCheck:resolve rejecter:reject fromCallSite:@"signIn"];
+  [[GIDSignIn sharedInstance] signIn];
 }
 
 RCT_EXPORT_METHOD(signOut:(RCTPromiseResolveBlock)resolve
@@ -114,15 +112,14 @@ RCT_EXPORT_METHOD(signOut:(RCTPromiseResolveBlock)resolve
 RCT_EXPORT_METHOD(revokeAccess:(RCTPromiseResolveBlock)resolve
                   revokeAccessReject:(RCTPromiseRejectBlock)reject)
 {
-  if ([self.promiseWrapper setPromiseWithInProgressCheck:resolve rejecter:reject fromCallSite:@"revokeAccess"]) {
-    [[GIDSignIn sharedInstance] disconnect];
-  }
+  [self.promiseWrapper setPromiseWithInProgressCheck:resolve rejecter:reject fromCallSite:@"revokeAccess"];
+  [[GIDSignIn sharedInstance] disconnect];
 }
 
 RCT_EXPORT_METHOD(isSignedIn:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
-  BOOL isSignedIn = [[GIDSignIn sharedInstance] hasAuthInKeychain];
+  BOOL isSignedIn = [[GIDSignIn sharedInstance] hasPreviousSignIn];
   resolve(@(isSignedIn));
 }
 
@@ -149,7 +146,7 @@ RCT_EXPORT_METHOD(getTokens:(RCTPromiseResolveBlock)resolve
     reject(@"getTokens", @"getTokens requires a user to be signed in", nil);
     return;
   }
-  
+
   GIDAuthenticationHandler handler = ^void(GIDAuthentication *authentication, NSError *error) {
     if (error) {
       reject(@"getTokens", error.localizedDescription, nil);
@@ -160,7 +157,7 @@ RCT_EXPORT_METHOD(getTokens:(RCTPromiseResolveBlock)resolve
                 });
     }
   };
-  
+
   [currentUser.authentication getTokensWithHandler:handler];
 }
 
@@ -173,7 +170,7 @@ RCT_EXPORT_METHOD(getTokens:(RCTPromiseResolveBlock)resolve
     return nil;
   }
   NSURL *imageURL = user.profile.hasImage ? [user.profile imageURLWithDimension:120] : nil;
-  
+
   NSDictionary *userInfo = @{
                              @"id": user.userID,
                              @"name": RCTNullIfNil(user.profile.name),
@@ -182,7 +179,7 @@ RCT_EXPORT_METHOD(getTokens:(RCTPromiseResolveBlock)resolve
                              @"photo": imageURL ? imageURL.absoluteString : [NSNull null],
                              @"email": user.profile.email,
                              };
-  
+
   NSDictionary *params = @{
                            @"user": userInfo,
                            @"idToken": user.authentication.idToken,
@@ -201,14 +198,14 @@ RCT_EXPORT_METHOD(getTokens:(RCTPromiseResolveBlock)resolve
     case kGIDSignInErrorCodeKeychain:
       errorMessage = @"A problem reading or writing to the application keychain.";
       break;
-    case kGIDSignInErrorCodeNoSignInHandlersInstalled:
-      errorMessage = @"No appropriate applications are installed on the device which can handle sign-in. Both webview and switching to browser have both been disabled.";
-      break;
     case kGIDSignInErrorCodeHasNoAuthInKeychain:
       errorMessage = @"The user has never signed in before with the given scopes, or they have since signed out.";
       break;
     case kGIDSignInErrorCodeCanceled:
       errorMessage = @"The user canceled the sign in request.";
+      break;
+    case kGIDSignInErrorCodeEMM:
+      errorMessage = @"An Enterprise Mobility Management related error has occurred.";
       break;
   }
   [self.promiseWrapper reject:errorMessage withError:error];
@@ -222,20 +219,10 @@ RCT_EXPORT_METHOD(getTokens:(RCTPromiseResolveBlock)resolve
   }
 }
 
-- (void)signIn:(GIDSignIn *)signIn presentViewController:(UIViewController *)viewController {
-  [RCTPresentedViewController() presentViewController:viewController animated:true completion:nil];
-}
-
-- (void)signIn:(GIDSignIn *)signIn dismissViewController:(UIViewController *)viewController {
-  [viewController dismissViewControllerAnimated:true completion:nil];
-}
-
-+ (BOOL)application:(UIApplication *)application openURL:(NSURL *)url
-  sourceApplication:(NSString *)sourceApplication annotation: (id)annotation {
-
-  return [[GIDSignIn sharedInstance] handleURL:url
-                             sourceApplication:sourceApplication
-                                    annotation:annotation];
++ (BOOL)application:(UIApplication *)app
+            openURL:(NSURL *)url
+            options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
+  return [[GIDSignIn sharedInstance] handleURL:url];
 }
 
 @end

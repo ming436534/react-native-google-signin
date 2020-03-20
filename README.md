@@ -1,7 +1,7 @@
 ![React Native Google Sign In](img/header.png)
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/react-native-google-signin"><img src="https://badge.fury.io/js/react-native-google-signin.svg" alt="NPM Version"></a>
+  <a href="https://www.npmjs.com/package/@react-native-community/google-signin"><img src="https://badge.fury.io/js/%40react-native-community%2Fgoogle-signin.svg" alt="NPM Version"></a>
 </p>
 
 ## Features
@@ -13,60 +13,26 @@
 
 ## Project setup and initialization
 
+For RN >= 0.60 please use version 3 installed from `@react-native-community/google-signin`
+
+`yarn add @react-native-community/google-signin`
+
+For RN <= 0.59 use version 2 installed from `react-native-google-signin`
+
 `yarn add react-native-google-signin`
 
 Then follow the [Android guide](docs/android-guide.md) and [iOS guide](docs/ios-guide.md)
 
 ## Public API
 
-### 1. GoogleSigninButton
-
-![signin button](img/signin-button.png)
+### 1. GoogleSignin
 
 ```js
-import { GoogleSignin, GoogleSigninButton } from 'react-native-google-signin';
-
-render() {
-  <GoogleSigninButton
-    style={{ width: 192, height: 48 }}
-    size={GoogleSigninButton.Size.Wide}
-    color={GoogleSigninButton.Color.Dark}
-    onPress={this._signIn}
-    disabled={this.state.isSigninInProgress} />
-}
-```
-
-#### Props
-
-##### `size`
-
-Possible values:
-
-- Size.Icon: display only Google icon. Recommended size of 48 x 48.
-- Size.Standard: icon with 'Sign in'. Recommended size of 230 x 48.
-- Size.Wide: icon with 'Sign in with Google'. Recommended size of 312 x 48.
-
-##### `color`
-
-Possible values:
-
-- Color.Dark: apply a blue background
-- Color.Light: apply a light gray background
-
-##### `disabled`
-
-Boolean. If true, all interactions for the button are disabled.
-
-##### `onPress`
-
-Handler to be called when the user taps the button
-
-##### [Inherited `View` props...](https://facebook.github.io/react-native/docs/view#props)
-
-### 2. GoogleSignin
-
-```js
-import { GoogleSignin, GoogleSigninButton, statusCodes } from 'react-native-google-signin';
+import {
+  GoogleSignin,
+  GoogleSigninButton,
+  statusCodes,
+} from '@react-native-community/google-signin';
 ```
 
 #### `configure(options)`
@@ -76,7 +42,7 @@ It is mandatory to call this method before attempting to call `signIn()` and `si
 Example usage with for default options: you get user email and basic profile info.
 
 ```js
-import { GoogleSignin } from 'react-native-google-signin';
+import { GoogleSignin } from '@react-native-community/google-signin';
 
 GoogleSignin.configure();
 ```
@@ -90,19 +56,21 @@ GoogleSignin.configure({
   offlineAccess: true, // if you want to access Google API on behalf of the user FROM YOUR SERVER
   hostedDomain: '', // specifies a hosted domain restriction
   loginHint: '', // [iOS] The user's ID, or email address, to be prefilled in the authentication UI if possible. [See docs here](https://developers.google.com/identity/sign-in/ios/api/interface_g_i_d_sign_in.html#a0a68c7504c31ab0b728432565f6e33fd)
-  forceConsentPrompt: true, // [Android] if you want to show the authorization prompt at each login.
+  forceCodeForRefreshToken: true, // [Android] related to `serverAuthCode`, read the docs link below *.
   accountName: '', // [Android] specifies an account name on the device that should be used
   iosClientId: '<FROM DEVELOPER CONSOLE>', // [iOS] optional, if you want to specify the client ID of type iOS (otherwise, it is taken from GoogleService-Info.plist)
 });
 ```
 
+\* [forceCodeForRefreshToken docs](https://developers.google.com/android/reference/com/google/android/gms/auth/api/signin/GoogleSignInOptions.Builder#public-googlesigninoptions.builder-requestserverauthcode-string-serverclientid,-boolean-forcecodeforrefreshtoken)
+
 #### `signIn()`
 
-Prompts a modal to let the user sign in into your application. Resolved promise returns an [`userInfo` object](#3-userinfo).
+Prompts a modal to let the user sign in into your application. Resolved promise returns an [`userInfo` object](#3-userinfo). Rejects with error otherwise.
 
 ```js
 // import statusCodes along with GoogleSignin
-import { GoogleSignin, statusCodes } from 'react-native-google-signin';
+import { GoogleSignin, statusCodes } from '@react-native-community/google-signin';
 
 // Somewhere in your code
 signIn = async () => {
@@ -114,7 +82,7 @@ signIn = async () => {
     if (error.code === statusCodes.SIGN_IN_CANCELLED) {
       // user cancelled the login flow
     } else if (error.code === statusCodes.IN_PROGRESS) {
-      // operation (f.e. sign in) is in progress already
+      // operation (e.g. sign in) is in progress already
     } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
       // play services not available or outdated
     } else {
@@ -167,9 +135,9 @@ getCurrentUser = async () => {
 };
 ```
 
-#### `clearCachedToken(tokenString)`
+#### `clearCachedAccessToken(accessTokenString)`
 
-This method only has an effect on Android (Calling this method always resolves on iOS.). You may run into a 401 Unauthorized error when a token is invalid. Call this method to remove the token from local cache and then call `getTokens()` to get fresh tokens.
+This method only has an effect on Android. You may run into a 401 Unauthorized error when a token is invalid. Call this method to remove the token from local cache and then call `getTokens()` to get fresh tokens. Calling this method on iOS does nothing and always resolves. This is because on iOS, `getTokens()` always returns valid tokens, refreshing them first if they have expired or are about to expire (see [docs](https://developers.google.com/identity/sign-in/ios/reference/Classes/GIDAuthentication#-gettokenswithhandler:)).
 
 #### `getTokens()`
 
@@ -177,7 +145,7 @@ Resolves with an object containing `{ idToken: string, accessToken: string, }` o
 
 #### `signOut()`
 
-Remove user session from the device.
+Removes user session from the device.
 
 ```js
 signOut = async () => {
@@ -193,7 +161,7 @@ signOut = async () => {
 
 #### `revokeAccess()`
 
-Remove your application from the user authorized applications.
+Removes your application from the user authorized applications.
 
 ```js
 revokeAccess = async () => {
@@ -208,7 +176,7 @@ revokeAccess = async () => {
 
 #### `hasPlayServices(options)`
 
-Check if device has Google Play Services installed. Always resolves to true on iOS.
+Checks if device has Google Play Services installed. Always resolves to true on iOS.
 
 Presence of up-to-date Google Play Services is required to show the sign in modal, but it is _not_ required to perform calls to `configure` and `signInSilently`. Therefore, we recommend to call `hasPlayServices` directly before `signIn`.
 
@@ -231,14 +199,60 @@ You may also use this call at any time to find out if Google Play Services are a
 
 These are useful when determining which kind of error has occured during sign in process. Import `statusCodes` along with `GoogleSignIn`. Under the hood these constants are derived from native GoogleSignIn error codes and are platform specific. Always prefer to compare `error.code` to `statusCodes.SIGN_IN_CANCELLED` or `statusCodes.IN_PROGRESS` and not relying on raw value of the `error.code`.
 
-| Name                          | Description                                                                                                   |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `SIGN_IN_CANCELLED`           | When user cancels the sign in flow                                                                            |
-| `IN_PROGRESS`                 | Trying to invoke another sign in flow (or any of the other operations) when previous one has not yet finished |
-| `SIGN_IN_REQUIRED`            | Useful for use with `signInSilently()` - no user has signed in yet                                            |
-| `PLAY_SERVICES_NOT_AVAILABLE` | Play services are not available or outdated, this can only happen on Android                                  |
+| Name                          | Description                                                                                                                                                                                                                                                                                                                                                               |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SIGN_IN_CANCELLED`           | When user cancels the sign in flow                                                                                                                                                                                                                                                                                                                                        |
+| `IN_PROGRESS`                 | Trying to invoke another operation (eg. `signInSilently`) when previous one has not yet finished. If you call eg. `signInSilently` twice, 2 calls to `signInSilently` in the native module will be done. The promise from the first call to `signInSilently` will be rejected with this error, and the second will resolve / reject with the result of the native module. |
+| `SIGN_IN_REQUIRED`            | Useful for use with `signInSilently()` - no user has signed in yet                                                                                                                                                                                                                                                                                                        |
+| `PLAY_SERVICES_NOT_AVAILABLE` | Play services are not available or outdated, this can only happen on Android                                                                                                                                                                                                                                                                                              |
 
 [Example how to use `statusCodes`](#signin).
+
+### 2. GoogleSigninButton
+
+![signin button](img/signin-button.png)
+
+```js
+import { GoogleSignin, GoogleSigninButton } from '@react-native-community/google-signin';
+
+render() {
+  <GoogleSigninButton
+    style={{ width: 192, height: 48 }}
+    size={GoogleSigninButton.Size.Wide}
+    color={GoogleSigninButton.Color.Dark}
+    onPress={this._signIn}
+    disabled={this.state.isSigninInProgress} />
+}
+```
+
+#### Props
+
+##### `size`
+
+Possible values:
+
+- Size.Icon: display only Google icon. Recommended size of 48 x 48.
+- Size.Standard: icon with 'Sign in'. Recommended size of 230 x 48.
+- Size.Wide: icon with 'Sign in with Google'. Recommended size of 312 x 48.
+
+Default: `Size.Standard`. Given the `size` prop you pass, we'll automatically apply the recommended size, but you can override it by passing the style prop as in `style={{ width, height }}`.
+
+##### `color`
+
+Possible values:
+
+- Color.Dark: apply a blue background
+- Color.Light: apply a light gray background
+
+##### `disabled`
+
+Boolean. If true, all interactions for the button are disabled.
+
+##### `onPress`
+
+Handler to be called when the user taps the button
+
+##### [Inherited `View` props...](https://facebook.github.io/react-native/docs/view#props)
 
 ### 3. `userInfo`
 
@@ -286,7 +300,7 @@ Please visit https://developers.google.com/identity/protocols/googlescopes or ht
 
 ## Troubleshooting
 
-If you get a `SIGN_IN_REQUIRED` error code on Android from `signIn()`, make sure you've correctly setup the Google project including the SHA-1 of your debug and release keystores, and copied the new `google-services.json` in your project.
+Please see the troubleshooting section in the [Android guide](docs/android-guide.md) and [iOS guide](docs/ios-guide.md).
 
 ## Licence
 

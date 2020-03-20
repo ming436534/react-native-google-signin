@@ -1,6 +1,6 @@
 // @flow
 import * as React from 'react';
-import type { ViewProps } from 'ViewPropTypes';
+import { typeof View } from 'react-native';
 
 export type ConfigureParams = $ReadOnly<{|
   iosClientId?: string,
@@ -9,19 +9,19 @@ export type ConfigureParams = $ReadOnly<{|
   scopes?: string[],
   loginHint?: string,
   hostedDomain?: string,
-  forceConsentPrompt?: boolean,
+  forceCodeForRefreshToken?: boolean,
   accountName?: string,
 |}>;
 
 export type GoogleSigninButtonProps = $ReadOnly<{|
-  ...ViewProps,
+  ...React.ElementConfig<View>,
   size?: number,
   color?: string,
   disabled?: boolean,
   onPress?: () => any,
 |}>;
 
-declare export class GoogleSigninButton extends React$Component<GoogleSigninButtonProps> {
+declare export class GoogleSigninButton extends React.Component<GoogleSigninButtonProps> {
   static Size: {
     Icon: number,
     Standard: number,
@@ -79,6 +79,6 @@ declare export class GoogleSignin {
   static revokeAccess: () => Promise<null>;
   static isSignedIn: () => Promise<boolean>;
   static getCurrentUser(): Promise<User | null>;
-  static clearCachedToken(token: string): Promise<null>;
+  static clearCachedAccessToken(token: string): Promise<null>;
   static getTokens(): Promise<{ idToken: string, accessToken: string }>;
 }

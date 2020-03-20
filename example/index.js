@@ -1,9 +1,14 @@
 // @flow
 import React, { Component } from 'react';
 import { AppRegistry, StyleSheet, Text, View, Alert, Button } from 'react-native';
-import { GoogleSignin, GoogleSigninButton, statusCodes } from 'react-native-google-signin';
-import type { User } from 'react-native-google-signin';
+import {
+  GoogleSignin,
+  GoogleSigninButton,
+  statusCodes,
+} from '@react-native-community/google-signin';
+import type { User } from '@react-native-community/google-signin';
 import config from './config'; // see docs/CONTRIBUTING.md for details
+import { TokenClearingView } from './TokenClearingView';
 
 type ErrorWithCode = Error & { code?: string };
 
@@ -48,7 +53,7 @@ class GoogleSigninSampleApp extends Component<{}, State> {
 
     const body = userInfo ? this.renderUserInfo(userInfo) : this.renderSignInButton();
     return (
-      <View style={[styles.container, { flex: 1 }]}>
+      <View style={[styles.container, styles.pageContainer]}>
         {this.renderIsSignedIn()}
         {this.renderGetCurrentUser()}
         {this.renderGetTokens()}
@@ -96,10 +101,9 @@ class GoogleSigninSampleApp extends Component<{}, State> {
   renderUserInfo(userInfo) {
     return (
       <View style={styles.container}>
-        <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 20 }}>
-          Welcome {userInfo.user.name}
-        </Text>
+        <Text style={styles.userInfo}>Welcome {userInfo.user.name}</Text>
         <Text>Your user info: {JSON.stringify(userInfo.user)}</Text>
+        <TokenClearingView userInfo={userInfo} />
 
         <Button onPress={this._signOut} title="Log out" />
         {this.renderError()}
@@ -111,7 +115,6 @@ class GoogleSigninSampleApp extends Component<{}, State> {
     return (
       <View style={styles.container}>
         <GoogleSigninButton
-          style={{ width: 212, height: 48 }}
           size={GoogleSigninButton.Size.Standard}
           color={GoogleSigninButton.Color.Auto}
           onPress={this._signIn}
@@ -136,19 +139,24 @@ class GoogleSigninSampleApp extends Component<{}, State> {
       const userInfo = await GoogleSignin.signIn();
       this.setState({ userInfo, error: null });
     } catch (error) {
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        // sign in was cancelled
-        Alert.alert('cancelled');
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        // operation in progress already
-        Alert.alert('in progress');
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert('play services not available or outdated');
-      } else {
-        Alert.alert('Something went wrong', error.toString());
-        this.setState({
-          error,
-        });
+      switch (error.code) {
+        case statusCodes.SIGN_IN_CANCELLED:
+          // sign in was cancelled
+          Alert.alert('cancelled');
+          break;
+        case statusCodes.IN_PROGRESS:
+          // operation (eg. sign in) already in progress
+          Alert.alert('in progress');
+          break;
+        case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+          // android only
+          Alert.alert('play services not available or outdated');
+          break;
+        default:
+          Alert.alert('Something went wrong', error.toString());
+          this.setState({
+            error,
+          });
       }
     }
   };
@@ -183,6 +191,8 @@ const styles = StyleSheet.create({
     color: '#333333',
     marginBottom: 5,
   },
+  userInfo: { fontSize: 18, fontWeight: 'bold', marginBottom: 20 },
+  pageContainer: { flex: 1 },
 });
 
 AppRegistry.registerComponent('GoogleSigninSampleApp', () => GoogleSigninSampleApp);
